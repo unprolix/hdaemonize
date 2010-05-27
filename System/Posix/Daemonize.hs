@@ -1,3 +1,4 @@
+{-# LANGUAGE RankNTypes #-}
 module System.Posix.Daemonize (
   -- * Simple daemonization
   daemonize, 
@@ -43,16 +44,13 @@ module System.Posix.Daemonize (
    http://sneakymustard.com/2008/12/11/haskell-daemons -}
 
 
-import Control.Concurrent
 import Control.Exception.Extensible
 import qualified Control.Monad as M (forever)
 import Prelude hiding (catch)
 import System
-import System.Exit
 import System.Posix
 import System.Posix.Syslog (withSyslog,Option(..),Priority(..),Facility(..),syslog)
-import System.Posix.Types (UserID, GroupID)
-import System.FilePath.Posix (FilePath,joinPath)
+import System.FilePath.Posix (joinPath)
 import Data.Maybe (isNothing, fromMaybe, fromJust)
 
 
@@ -102,7 +100,7 @@ daemonize program =
 -- 
 -- > serviced simpleDaemon
 -- 
---   The resulting program takes one of three argments: @start@,
+--   The resulting program takes one of three arguments: @start@,
 --   @stop@, and @restart@.  All control the status of a daemon by
 --   looking for a file containing a text string holding the PID of
 --   any running instance.  Conventionally, this file is in
@@ -131,7 +129,7 @@ daemonize program =
 --   Finally, exceptions in the program are caught, logged to syslog,
 --   and the program restarted.
 
-serviced :: CreateDaemon -> IO ()
+serviced :: CreateDaemon a -> IO ()
 serviced daemon = do 
   systemName <- getProgName
   let daemon' = daemon { name = if isNothing (name daemon) 
@@ -144,8 +142,9 @@ serviced daemon = do
                       do let log = syslog Notice
                          log "starting"
                          pidWrite daemon
+                         privVal <- privilegedAction daemon
                          dropPrivileges daemon
-                         forever (program daemon)
+                         forever $ program daemon $ privVal
 
       process daemon ["start"] = pidExists daemon >>= f where
           f True  = do error "PID file exists. Process already running?"
@@ -168,16 +167,21 @@ serviced daemon = do
 
       process daemon ["restart"] = do process daemon ["stop"]
                                       process daemon ["start"]
-      process daemon _ = 
+      process _      _ = 
         getProgName >>= \pname -> putStrLn $ "usage: " ++ pname ++ " {start|stop|restart}"
 
 -- | The details of any given daemon are fixed by the 'CreateDaemon'
 -- record passed to 'serviced'.  You can also take a predefined form
 -- of 'CreateDaemon', such as 'simpleDaemon' below, and set what
 -- options you want, rather than defining the whole record yourself.
-data CreateDaemon = CreateDaemon {
-  program :: IO (), -- ^ The actual guts of the daemon, more or less
-                    -- the @main@ function.
+data CreateDaemon a = CreateDaemon {
+  privilegedAction :: IO a, -- ^ An action to be run as root, before
+                            -- permissions are dropped, e.g., binding
+                            -- a trusted port.
+  program :: a -> IO (), -- ^ The actual guts of the daemon, more or less
+                         -- the @main@ function.  Its argument is the result
+                         -- of running 'privilegedAction' before dropping
+                         -- privileges.
   name :: Maybe String, -- ^ The name of the daemon, which is used as
                         -- the name for the PID file, as the name that
                         -- appears in the system logs, and as the user
@@ -212,7 +216,8 @@ data CreateDaemon = CreateDaemon {
 -- | The simplest possible instance of 'CreateDaemon' is 
 -- 
 -- > CreateDaemon {
--- >  program = forever $ return ()
+-- >  privilegedAction = return ()
+-- >  program = const $ forever $ return ()
 -- >  name = Nothing,
 -- >  user = Nothing,
 -- >  group = Nothing,
@@ -224,14 +229,15 @@ data CreateDaemon = CreateDaemon {
 -- name, 'simpleDaemon', since you may want to use it as a template
 -- and modify only the fields that you need.
 
-simpleDaemon :: CreateDaemon
+simpleDaemon :: CreateDaemon ()
 simpleDaemon = CreateDaemon {
   name = Nothing,
   user = Nothing,
   group = Nothing,
   syslogOptions = [],
   pidfileDirectory = Nothing,
-  program = M.forever $ return ()
+  program = const $ M.forever $ return (),
+  privilegedAction = return ()
 }
   
 
@@ -262,17 +268,17 @@ getGroupID :: String -> IO (Maybe GroupID)
 getGroupID group = 
     try (fmap groupID (getGroupEntryForName group)) >>= return . f where
         f :: Either IOException GroupID -> Maybe GroupID
-        f (Left e)    = Nothing
+        f (Left _)    = Nothing
         f (Right gid) = Just gid
 
 getUserID :: String -> IO (Maybe UserID)
 getUserID user = 
     try (fmap userID (getUserEntryForName user)) >>= return . f where
         f :: Either IOException UserID -> Maybe UserID
-        f (Left e)    = Nothing
+        f (Left _)    = Nothing
         f (Right uid) = Just uid
 
-dropPrivileges :: CreateDaemon -> IO ()
+dropPrivileges :: CreateDaemon a -> IO ()
 dropPrivileges daemon = 
     do Just ud <- getUserID "daemon"
        Just gd <- getGroupID "daemon"
@@ -283,19 +289,19 @@ dropPrivileges daemon =
        setGroupID g 
        setUserID u
 
-pidFile:: CreateDaemon -> String
+pidFile:: CreateDaemon a -> String
 pidFile daemon = joinPath [dir, (fromJust $ name daemon) ++ ".pid"]
   where dir = fromMaybe "/var/run" (pidfileDirectory daemon)
 
-pidExists :: CreateDaemon -> IO Bool
+pidExists :: CreateDaemon a -> IO Bool
 pidExists daemon = fileExist (pidFile daemon)
 
-pidRead :: CreateDaemon -> IO (Maybe CPid)
+pidRead :: CreateDaemon a -> IO (Maybe CPid)
 pidRead daemon = pidExists daemon >>= choose where
     choose True  = fmap (Just . read) $ readFile (pidFile daemon)
     choose False = return Nothing
 
-pidWrite :: CreateDaemon -> IO ()
+pidWrite :: CreateDaemon a -> IO ()
 pidWrite daemon =
     getProcessID >>= \pid ->
     writeFile (pidFile daemon) (show pid)
