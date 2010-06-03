@@ -3,8 +3,9 @@ module System.Posix.Daemonize (
   -- * Simple daemonization
   daemonize, 
   -- * Building system services
-  serviced, CreateDaemon(..), simpleDaemon
-  
+  serviced, CreateDaemon(..), simpleDaemon,
+  -- * Intradaemon utilities                              
+  fatalError
   -- * An example                              
   --                               
   -- | Here is an example of a full program which writes a message to
@@ -314,3 +315,13 @@ pidLive pid =
         
 pass :: IO () 
 pass = return ()
+
+-- | When you encounter an error where the only sane way to handle it
+-- is to write an error to the log and die messily, use fatalError.
+-- This is a good candidate for things like not being able to find
+-- configuration files on startup.
+fatalError :: String -> IO a
+fatalError msg = do
+  syslog Error $ "Terminating from error: " ++ msg
+  exitImmediately (ExitFailure 1)
+  undefined -- You will never reach this; it's there to make the type checker happy
