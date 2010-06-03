@@ -5,7 +5,7 @@ module System.Posix.Daemonize (
   -- * Building system services
   serviced, CreateDaemon(..), simpleDaemon,
   -- * Intradaemon utilities                              
-  fatalError
+  fatalError, exitCleanly
   -- * An example                              
   --                               
   -- | Here is an example of a full program which writes a message to
@@ -45,6 +45,7 @@ module System.Posix.Daemonize (
    http://sneakymustard.com/2008/12/11/haskell-daemons -}
 
 
+import Control.Monad.Trans
 import Control.Exception.Extensible
 import qualified Control.Monad as M (forever)
 import Prelude hiding (catch)
@@ -320,8 +321,16 @@ pass = return ()
 -- is to write an error to the log and die messily, use fatalError.
 -- This is a good candidate for things like not being able to find
 -- configuration files on startup.
-fatalError :: String -> IO a
-fatalError msg = do
+fatalError :: MonadIO m => String -> m a
+fatalError msg = liftIO $ do
   syslog Error $ "Terminating from error: " ++ msg
   exitImmediately (ExitFailure 1)
+  undefined -- You will never reach this; it's there to make the type checker happy
+
+-- | Use this function when the daemon should terminate normally.  It
+-- logs a message, and exits with status 0.
+exitCleanly :: MonadIO m => m a
+exitCleanly = liftIO $ do
+  syslog Notice "Exiting."
+  exitImmediately ExitSuccess
   undefined -- You will never reach this; it's there to make the type checker happy
