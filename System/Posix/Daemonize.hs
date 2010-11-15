@@ -27,11 +27,11 @@ module System.Posix.Daemonize (
   -- > main :: IO ()
   -- > main = serviced stillAlive
   -- > 
-  -- > stillAlive :: CreateDaemon
+  -- > stillAlive :: CreateDaemon ()
   -- > stillAlive = simpleDaemon { program = stillAliveMain }
   -- > 
-  -- > stillAliveMain :: IO ()
-  -- > stillAliveMain = do
+  -- > stillAliveMain :: () -> IO ()
+  -- > stillAliveMain _ = do
   -- >   installHandler sigHUP (Catch taunt) (Just fullSignalSet)
   -- >   forever $ do threadDelay (10^6)
   -- >                syslog Notice "I'm still alive!"

@@ -1,4 +1,4 @@
-`hdaemonize-0.2`
+`hdaemonize-0.4.3`
 =================
 
 `hdaemonize` is a simple library that hides some of the complexities
@@ -8,7 +8,7 @@ Obtaining
 -----------
 
 The latest version is available (BSD license) at
-[GitHub](http://github.com/toyvo/hdaemonize/tree/master). 
+[GitHub](https://github.com/madhadron/hdaemonize).
 
 Using
 -------
@@ -66,6 +66,9 @@ prefers to use those of `mydaemon`, if present.
 
 Changelog
 ---------
+
+* 0.4
+    * added support for a privileged action before dropping privileges
 
 * 0.3
     * merged with updates by madhadron
