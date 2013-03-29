@@ -49,7 +49,7 @@ import Control.Monad.Trans
 import Control.Exception.Extensible
 import qualified Control.Monad as M (forever)
 
-#ifdef MIN_VERSION_base(4,6)
+#if MIN_VERSION_base(4,6,0)
 import Prelude
 #else
 import Prelude hiding (catch)
