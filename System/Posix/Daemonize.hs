@@ -166,10 +166,9 @@ serviced daemon = do
              case pid of
                Nothing  -> pass
                Just pid -> 
-                   (do signalProcess sigTERM pid
-                       usleep (10^6)
-                       whenM (pidLive pid) $
-                            do usleep (3*10^6)
+                   (do whenM (pidLive pid) $
+                            do signalProcess sigTERM pid
+                               usleep (4*10^6)
                                whenM (pidLive pid) (signalProcess sigKILL pid))
                    `finally`
                    removeLink (pidFile daemon)
