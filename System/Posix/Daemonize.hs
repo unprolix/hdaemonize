@@ -45,6 +45,7 @@ module System.Posix.Daemonize (
    http://sneakymustard.com/2008/12/11/haskell-daemons -}
 
 
+import Control.Monad (when)
 import Control.Monad.Trans
 import Control.Exception.Extensible
 import qualified Control.Monad as M (forever)
@@ -162,15 +163,14 @@ serviced daemon = do
                  
       process daemon ["stop"]  = 
           do pid <- pidRead daemon
-             let ifdo x f = x >>= \x -> if x then f else pass
              case pid of
                Nothing  -> pass
                Just pid -> 
                    (do signalProcess sigTERM pid
                        usleep (10^6)
-                       ifdo (pidLive pid) $ 
+                       whenM (pidLive pid) $
                             do usleep (3*10^6)
-                               ifdo (pidLive pid) (signalProcess sigKILL pid))
+                               whenM (pidLive pid) (signalProcess sigKILL pid))
                    `finally`
                    removeLink (pidFile daemon)
 
@@ -178,6 +178,10 @@ serviced daemon = do
                                       process daemon ["start"]
       process _      _ = 
         getProgName >>= \pname -> putStrLn $ "usage: " ++ pname ++ " {start|stop|restart}"
+
+-- | A monadic-conditional version of the "when" guard (copied from shelly.)
+whenM :: Monad m => m Bool -> m () -> m ()
+whenM c a = c >>= \res -> when res a
 
 -- | The details of any given daemon are fixed by the 'CreateDaemon'
 -- record passed to 'serviced'.  You can also take a predefined form
