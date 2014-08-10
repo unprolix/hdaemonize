@@ -147,8 +147,11 @@ serviced daemon = do
   args <- getArgs
   process daemon' args
     where
-      
+#if MIN_VERSION_hsyslog(2,0,0)
+      program' daemon = withSyslog (fromJust $ name daemon) (syslogOptions daemon) DAEMON [] $
+#else
       program' daemon = withSyslog (fromJust $ name daemon) (syslogOptions daemon) DAEMON $
+#endif
                       do let log = syslog Notice
                          log "starting"
                          pidWrite daemon
