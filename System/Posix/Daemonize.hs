@@ -168,8 +168,8 @@ serviced daemon = do
                Just pid -> 
                    (do whenM (pidLive pid) $
                             do signalProcess sigTERM pid
-                               usleep (4*10^6)
-                               whenM (pidLive pid) (signalProcess sigKILL pid))
+                               usleep (10^3)
+                               wait (killWait daemon) pid)
                    `finally`
                    removeLink (pidFile daemon)
 
@@ -177,6 +177,16 @@ serviced daemon = do
                                       process daemon ["start"]
       process _      _ = 
         getProgName >>= \pname -> putStrLn $ "usage: " ++ pname ++ " {start|stop|restart}"
+
+      -- Wait 'secs' seconds for the process to exit, checking
+      -- for liveness once a second.  If still alive send sigKILL.
+      wait :: Maybe Int -> CPid -> IO ()
+      wait secs pid =
+          whenM (pidLive pid) $
+               if maybe True (> 0) secs
+               then do usleep (10^6)
+                       wait (fmap (\x->x-1) secs) pid
+               else signalProcess sigKILL pid
 
 -- | A monadic-conditional version of the "when" guard (copied from shelly.)
 whenM :: Monad m => m Bool -> m () -> m ()
@@ -216,13 +226,16 @@ data CreateDaemon a = CreateDaemon {
                          -- the user field.
   syslogOptions :: [Option], -- ^ The options the daemon should set on
                              -- syslog.  You can safely leave this as @[]@.
-  pidfileDirectory :: Maybe FilePath -- ^ The directory where the
-                                     -- daemon should write and look
-                                     -- for the PID file.  'Nothing'
-                                     -- means @/var/run@.  Unless you
-                                     -- have a good reason to do
-                                     -- otherwise, leave this as
-                                     -- 'Nothing'.
+  pidfileDirectory :: Maybe FilePath, -- ^ The directory where the
+                                      -- daemon should write and look
+                                      -- for the PID file.  'Nothing'
+                                      -- means @/var/run@.  Unless you
+                                      -- have a good reason to do
+                                      -- otherwise, leave this as
+                                      -- 'Nothing'.
+  killWait :: Maybe Int -- ^ How many seconds to wait between sending
+                        -- sigTERM and sending sigKILL.  If Nothing
+                        -- wait forever.  Default 4.
 }
 
 -- | The simplest possible instance of 'CreateDaemon' is 
@@ -249,7 +262,8 @@ simpleDaemon = CreateDaemon {
   syslogOptions = [],
   pidfileDirectory = Nothing,
   program = const $ M.forever $ return (),
-  privilegedAction = return ()
+  privilegedAction = return (),
+  killWait = Just 4
 }
   
 
