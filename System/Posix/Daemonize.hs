@@ -45,6 +45,7 @@ module System.Posix.Daemonize (
    http://sneakymustard.com/2008/12/11/haskell-daemons -}
 
 
+import Control.Monad (when)
 import Control.Monad.Trans
 import Control.Exception.Extensible
 import qualified Control.Monad as M (forever)
@@ -146,8 +147,11 @@ serviced daemon = do
   args <- getArgs
   process daemon' args
     where
-      
+#if MIN_VERSION_hsyslog(2,0,0)
+      program' daemon = withSyslog (fromJust $ name daemon) (syslogOptions daemon) DAEMON [] $
+#else
       program' daemon = withSyslog (fromJust $ name daemon) (syslogOptions daemon) DAEMON $
+#endif
                       do let log = syslog Notice
                          log "starting"
                          pidWrite daemon
@@ -162,15 +166,13 @@ serviced daemon = do
                  
       process daemon ["stop"]  = 
           do pid <- pidRead daemon
-             let ifdo x f = x >>= \x -> if x then f else pass
              case pid of
                Nothing  -> pass
                Just pid -> 
-                   (do signalProcess sigTERM pid
-                       usleep (10^6)
-                       ifdo (pidLive pid) $ 
-                            do usleep (3*10^6)
-                               ifdo (pidLive pid) (signalProcess sigKILL pid))
+                   (do whenM (pidLive pid) $
+                            do signalProcess sigTERM pid
+                               usleep (10^3)
+                               wait (killWait daemon) pid)
                    `finally`
                    removeLink (pidFile daemon)
 
@@ -178,6 +180,20 @@ serviced daemon = do
                                       process daemon ["start"]
       process _      _ = 
         getProgName >>= \pname -> putStrLn $ "usage: " ++ pname ++ " {start|stop|restart}"
+
+      -- Wait 'secs' seconds for the process to exit, checking
+      -- for liveness once a second.  If still alive send sigKILL.
+      wait :: Maybe Int -> CPid -> IO ()
+      wait secs pid =
+          whenM (pidLive pid) $
+               if maybe True (> 0) secs
+               then do usleep (10^6)
+                       wait (fmap (\x->x-1) secs) pid
+               else signalProcess sigKILL pid
+
+-- | A monadic-conditional version of the "when" guard (copied from shelly.)
+whenM :: Monad m => m Bool -> m () -> m ()
+whenM c a = c >>= \res -> when res a
 
 -- | The details of any given daemon are fixed by the 'CreateDaemon'
 -- record passed to 'serviced'.  You can also take a predefined form
@@ -213,13 +229,16 @@ data CreateDaemon a = CreateDaemon {
                          -- the user field.
   syslogOptions :: [Option], -- ^ The options the daemon should set on
                              -- syslog.  You can safely leave this as @[]@.
-  pidfileDirectory :: Maybe FilePath -- ^ The directory where the
-                                     -- daemon should write and look
-                                     -- for the PID file.  'Nothing'
-                                     -- means @/var/run@.  Unless you
-                                     -- have a good reason to do
-                                     -- otherwise, leave this as
-                                     -- 'Nothing'.
+  pidfileDirectory :: Maybe FilePath, -- ^ The directory where the
+                                      -- daemon should write and look
+                                      -- for the PID file.  'Nothing'
+                                      -- means @/var/run@.  Unless you
+                                      -- have a good reason to do
+                                      -- otherwise, leave this as
+                                      -- 'Nothing'.
+  killWait :: Maybe Int -- ^ How many seconds to wait between sending
+                        -- sigTERM and sending sigKILL.  If Nothing
+                        -- wait forever.  Default 4.
 }
 
 -- | The simplest possible instance of 'CreateDaemon' is 
@@ -246,7 +265,8 @@ simpleDaemon = CreateDaemon {
   syslogOptions = [],
   pidfileDirectory = Nothing,
   program = const $ M.forever $ return (),
-  privilegedAction = return ()
+  privilegedAction = return (),
+  killWait = Just 4
 }
   
 
