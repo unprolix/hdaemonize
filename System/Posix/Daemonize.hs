@@ -192,7 +192,7 @@ serviced daemon = do
         f False = putStrLn $ (fromJust $ name daemon) ++ " is not running."
 
       process _      _ =
-        getProgName >>= \pname -> putStrLn $ "usage: " ++ pname ++ " {start|stop|restart}"
+        getProgName >>= \pname -> putStrLn $ "usage: " ++ pname ++ " {start|stop|status|restart}"
 
       -- Wait 'secs' seconds for the process to exit, checking
       -- for liveness once a second.  If still alive send sigKILL.
