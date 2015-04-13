@@ -178,7 +178,20 @@ serviced daemon = do
 
       process daemon ["restart"] = do process daemon ["stop"]
                                       process daemon ["start"]
-      process _      _ = 
+
+      process daemon ["status"] = pidExists daemon >>= f where
+        f True =
+          do pid <- pidRead daemon
+             case pid of
+               Nothing -> putStrLn $ (fromJust $ name daemon) ++ " is not running."
+               Just pid ->
+                 do res <- pidLive pid
+                    if res then
+                      do putStrLn $ (fromJust $ name daemon) ++ " is running."
+                         else putStrLn $ (fromJust $ name daemon) ++ " is not running, but pidfile is remaining."
+        f False = putStrLn $ (fromJust $ name daemon) ++ " is not running."
+
+      process _      _ =
         getProgName >>= \pname -> putStrLn $ "usage: " ++ pname ++ " {start|stop|restart}"
 
       -- Wait 'secs' seconds for the process to exit, checking
