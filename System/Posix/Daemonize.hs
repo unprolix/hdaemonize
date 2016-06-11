@@ -1,13 +1,13 @@
 {-# LANGUAGE RankNTypes #-}
 module System.Posix.Daemonize (
   -- * Simple daemonization
-  daemonize, 
+  daemonize,
   -- * Building system services
   serviced, CreateDaemon(..), simpleDaemon,
-  -- * Intradaemon utilities                              
+  -- * Intradaemon utilities
   fatalError, exitCleanly
-  -- * An example                              
-  --                               
+  -- * An example
+  --
   -- | Here is an example of a full program which writes a message to
   -- syslog once a second proclaiming its continued existance, and
   -- which installs its own SIGHUP handler.  Note that you won't
@@ -15,7 +15,7 @@ module System.Posix.Daemonize (
   -- systems.  @syslogd@ detects repeated messages and prints the
   -- first one, then delays for the rest and eventually writes a line
   -- about how many times it has seen it.
-  --                               
+  --
   -- > module Main where
   -- >
   -- > import System.Posix.Daemonize (CreateDaemon(..), serviced, simpleDaemon)
@@ -23,25 +23,25 @@ module System.Posix.Daemonize (
   -- > import System.Posix.Syslog (syslog, Priority(Notice))
   -- > import Control.Concurrent (threadDelay)
   -- > import Control.Monad (forever)
-  -- > 
+  -- >
   -- > main :: IO ()
   -- > main = serviced stillAlive
-  -- > 
+  -- >
   -- > stillAlive :: CreateDaemon ()
   -- > stillAlive = simpleDaemon { program = stillAliveMain }
-  -- > 
+  -- >
   -- > stillAliveMain :: () -> IO ()
   -- > stillAliveMain _ = do
   -- >   installHandler sigHUP (Catch taunt) (Just fullSignalSet)
   -- >   forever $ do threadDelay (10^6)
   -- >                syslog Notice "I'm still alive!"
-  -- >                
+  -- >
   -- > taunt :: IO ()
   -- > taunt = syslog Notice "I sneeze in your general direction, you and your SIGHUP."
 
   ) where
-      
-{- originally based on code from 
+
+{- originally based on code from
    http://sneakymustard.com/2008/12/11/haskell-daemons -}
 
 
@@ -70,23 +70,23 @@ import Data.Maybe (isNothing, fromMaybe, fromJust)
 -- they are fixed, they can be written as a single function,
 -- 'daemonize' taking an 'IO' action which represents the daemon's
 -- actual activity.
--- 
+--
 -- Briefly, 'daemonize' sets the file creation mask to 0, forks twice,
 -- changed the working directory to @/@, closes stdin, stdout, and
 -- stderr, blocks 'sigHUP', and runs its argument.  Strictly, it
 -- should close all open file descriptors, but this is not possible in
 -- a sensible way in Haskell.
--- 
+--
 -- The most trivial daemon would be
--- 
+--
 -- > daemonize (forever $ return ())
--- 
+--
 -- which does nothing until killed.
 
-daemonize :: IO () -> IO () 
-daemonize program = 
-    
-  do setFileCreationMask 0 
+daemonize :: IO () -> IO ()
+daemonize program =
+
+  do setFileCreationMask 0
      forkProcess p
      exitImmediately ExitSuccess
 
@@ -95,11 +95,11 @@ daemonize program =
       p  = do createSession
               forkProcess p'
               exitImmediately ExitSuccess
-                              
+
       p' = do changeWorkingDirectory "/"
               closeFileDescriptors
               blockSignal sigHUP
-              program 
+              program
 
 
 
@@ -107,9 +107,9 @@ daemonize program =
 -- | 'serviced' turns a program into a UNIX daemon (system service)
 --   ready to be deployed to /etc/rc.d or similar startup folder.  It
 --   is meant to be used in the @main@ function of a program, such as
--- 
+--
 -- > serviced simpleDaemon
--- 
+--
 --   The resulting program takes one of three arguments: @start@,
 --   @stop@, and @restart@.  All control the status of a daemon by
 --   looking for a file containing a text string holding the PID of
@@ -125,9 +125,9 @@ daemonize program =
 --   written therein.  First it does a soft kill, SIGTERM, giving the
 --   daemon a chance to shut down cleanly, then three seconds later a
 --   hard kill which the daemon cannot catch or escape.
--- 
+--
 --   @restart@ is simple @stop@ followed by @start@.
--- 
+--
 --   'serviced' also tries to drop privileges.  If you don't specify a
 --   user the daemon should run as, it will try to switch to a user
 --   with the same name as the daemon, and otherwise to user @daemon@.
@@ -135,14 +135,14 @@ daemonize program =
 --   matters, the name of the daemon is by default the name of the
 --   executable file, but can again be set to something else in the
 --   'CreateDaemon' record.
--- 
+--
 --   Finally, exceptions in the program are caught, logged to syslog,
 --   and the program restarted.
 
 serviced :: CreateDaemon a -> IO ()
-serviced daemon = do 
+serviced daemon = do
   systemName <- getProgName
-  let daemon' = daemon { name = if isNothing (name daemon) 
+  let daemon' = daemon { name = if isNothing (name daemon)
                                 then Just systemName else name daemon }
   args <- getArgs
   process daemon' args
@@ -163,12 +163,12 @@ serviced daemon = do
           f True  = do error "PID file exists. Process already running?"
                        exitImmediately (ExitFailure 1)
           f False = daemonize (program' daemon)
-                 
-      process daemon ["stop"]  = 
+
+      process daemon ["stop"]  =
           do pid <- pidRead daemon
              case pid of
                Nothing  -> pass
-               Just pid -> 
+               Just pid ->
                    (do whenM (pidLive pid) $
                             do signalProcess sigTERM pid
                                usleep (10^3)
@@ -254,8 +254,8 @@ data CreateDaemon a = CreateDaemon {
                         -- wait forever.  Default 4.
 }
 
--- | The simplest possible instance of 'CreateDaemon' is 
--- 
+-- | The simplest possible instance of 'CreateDaemon' is
+--
 -- > CreateDaemon {
 -- >  privilegedAction = return ()
 -- >  program = const $ forever $ return ()
@@ -265,7 +265,7 @@ data CreateDaemon a = CreateDaemon {
 -- >  syslogOptions = [],
 -- >  pidfileDirectory = Nothing,
 -- > }
--- 
+--
 -- which does nothing forever with all default settings.  We give it a
 -- name, 'simpleDaemon', since you may want to use it as a template
 -- and modify only the fields that you need.
@@ -281,54 +281,54 @@ simpleDaemon = CreateDaemon {
   privilegedAction = return (),
   killWait = Just 4
 }
-  
+
 
 
 
 {- implementation -}
 
 forever :: IO () -> IO ()
-forever program =     
+forever program =
     program `catch` restart where
-        restart :: SomeException -> IO () 
-        restart e = 
+        restart :: SomeException -> IO ()
+        restart e =
             do syslog Error ("unexpected exception: " ++ show e)
                syslog Error "restarting in 5 seconds"
                usleep (5 * 10^6)
                forever program
 
 closeFileDescriptors :: IO ()
-closeFileDescriptors = 
+closeFileDescriptors =
     do null <- openFd "/dev/null" ReadWrite Nothing defaultFileFlags
        let sendTo fd' fd = closeFd fd >> dupTo fd' fd
        mapM_ (sendTo null) $ [stdInput, stdOutput, stdError]
 
-blockSignal :: Signal -> IO () 
+blockSignal :: Signal -> IO ()
 blockSignal sig = installHandler sig Ignore Nothing >> pass
 
 getGroupID :: String -> IO (Maybe GroupID)
-getGroupID group = 
+getGroupID group =
     try (fmap groupID (getGroupEntryForName group)) >>= return . f where
         f :: Either IOException GroupID -> Maybe GroupID
         f (Left _)    = Nothing
         f (Right gid) = Just gid
 
 getUserID :: String -> IO (Maybe UserID)
-getUserID user = 
+getUserID user =
     try (fmap userID (getUserEntryForName user)) >>= return . f where
         f :: Either IOException UserID -> Maybe UserID
         f (Left _)    = Nothing
         f (Right uid) = Just uid
 
 dropPrivileges :: CreateDaemon a -> IO ()
-dropPrivileges daemon = 
+dropPrivileges daemon =
     do Just ud <- getUserID "daemon"
        Just gd <- getGroupID "daemon"
        let targetUser = fromMaybe (fromJust $ name daemon) (user daemon)
            targetGroup = fromMaybe (fromJust $ name daemon) (group daemon)
        u       <- fmap (maybe ud id) $ getUserID targetUser
        g       <- fmap (maybe gd id) $ getGroupID targetGroup
-       setGroupID g 
+       setGroupID g
        setUserID u
 
 pidFile:: CreateDaemon a -> String
@@ -349,12 +349,12 @@ pidWrite daemon =
     writeFile (pidFile daemon) (show pid)
 
 pidLive :: CPid -> IO Bool
-pidLive pid = 
+pidLive pid =
     (getProcessPriority pid >> return True) `catch` f where
         f :: IOException -> IO Bool
         f _ = return False
-        
-pass :: IO () 
+
+pass :: IO ()
 pass = return ()
 
 -- | When you encounter an error where the only sane way to handle it
