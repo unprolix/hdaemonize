@@ -90,9 +90,9 @@ Changelog
 
 Authors
 -------
+Lana Black <lanablack@amok.cc>
 
-Anton Tayanovskyy <name.surname@gmail.com>, bug reports and feature
-requests welcome.
+Anton Tayanovskyy <name.surname@gmail.com>.
 
 The code is originally based on a public posting by
 [Andre Nathan](http://sneakymustard.com/), used by permission.
