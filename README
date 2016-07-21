@@ -1,5 +1,6 @@
 `hdaemonize`
 =================
+[![Build Status](https://travis-ci.org/greydot/hdaemonize.svg?branch=master)](https://travis-ci.org/greydot/hdaemonize)
 
 `hdaemonize` is a simple library that hides some of the complexities
 of writing UNIX daemons in Haskell.
