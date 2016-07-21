@@ -60,7 +60,7 @@ import Prelude hiding (catch)
 #endif
 
 #if !(MIN_VERSION_base(4,8,0))
-import Control.Applicative ((<$))
+import Control.Applicative ((<$), (<$>))
 #endif
 
 import Data.ByteString (ByteString)
