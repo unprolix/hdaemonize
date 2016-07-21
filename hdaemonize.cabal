@@ -1,5 +1,5 @@
 Name:		hdaemonize
-Version:	0.5.0.2
+Version:	0.5.1
 Cabal-Version:  >= 1.6
 License:	BSD3
 License-file:   LICENSE
@@ -18,15 +18,14 @@ Extra-Source-Files:	README
 
 Library
   Build-Depends:    base >= 4 && < 5
+                  , bytestring
                   , unix
-                  , hsyslog < 3
+                  , hsyslog >= 4
                   , extensible-exceptions
                   , filepath
                   , mtl
   Exposed-modules:      System.Posix.Daemonize
-  Extensions:           CPP
   if impl(ghc > 6.12)
       Ghc-Options:      -Wall -fno-warn-unused-do-bind -fno-warn-type-defaults -fno-warn-name-shadowing
   else
       Ghc-Options:      -Wall -fno-warn-type-defaults -fno-warn-name-shadowing
-

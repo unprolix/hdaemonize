@@ -67,6 +67,9 @@ prefers to use those of `mydaemon`, if present.
 Changelog
 ---------
 
+* 0.5.1
+    * Updated to use hsyslog >=4
+
 * 0.4
     * added support for a privileged action before dropping privileges
 
