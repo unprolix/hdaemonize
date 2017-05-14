@@ -1,5 +1,5 @@
 Name:		hdaemonize
-Version:	0.5.2
+Version:	0.5.3
 Cabal-Version:  >= 1.6
 License:	BSD3
 License-file:   LICENSE
@@ -21,7 +21,7 @@ Library
   Build-Depends:    base >= 4 && < 5
                   , bytestring
                   , unix
-                  , hsyslog >= 4
+                  , hsyslog == 4
                   , extensible-exceptions
                   , filepath
                   , mtl
