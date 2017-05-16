@@ -65,15 +65,17 @@ import Control.Applicative ((<$), (<$>))
 
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as ByteString
+import Data.ByteString.Unsafe (unsafeUseAsCStringLen)
 import Data.Maybe (isNothing, fromMaybe, fromJust)
 import System.Environment
 import System.Exit
 import System.Posix
-import System.Posix.Syslog (withSyslog,SyslogConfig(..),Option(..),Priority(..),PriorityMask(..),Facility(..),syslogUnsafe)
+import System.Posix.Syslog (Priority(..), Facility(Daemon), Option, withSyslog)
+import qualified System.Posix.Syslog as Log
 import System.FilePath.Posix (joinPath)
 
 syslog :: Priority -> ByteString -> IO ()
-syslog = syslogUnsafe DAEMON
+syslog pri msg = unsafeUseAsCStringLen msg (Log.syslog (Just Daemon) pri)
 
 -- | Turning a process into a daemon involves a fixed set of
 -- operations on unix systems, described in section 13.3 of Stevens
@@ -154,7 +156,7 @@ serviced daemon = do
         args <- getArgs
         process daemon' args
     where
-      program' daemon = withSyslog (SyslogConfig (ByteString.pack $ fromJust $ name daemon) (syslogOptions daemon) DAEMON NoMask) $ \_ ->
+      program' daemon = withSyslog (fromJust (name daemon)) (syslogOptions daemon) Daemon $
                       do let log = syslog Notice
                          log "starting"
                          pidWrite daemon
