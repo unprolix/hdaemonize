@@ -68,6 +68,9 @@ prefers to use those of `mydaemon`, if present.
 Changelog
 ---------
 
+* 0.5.4
+    * Update to use hsyslog == 5.
+
 * 0.5.2
     * Fix pre-AMP builds.
 
