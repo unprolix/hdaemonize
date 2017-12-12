@@ -15,6 +15,7 @@ module System.Posix.Daemonize (
    http://sneakymustard.com/2008/12/11/haskell-daemons -}
 
 
+import Control.Applicative(pure)
 import Control.Monad (when)
 import Control.Monad.Trans
 import Control.Exception.Extensible
