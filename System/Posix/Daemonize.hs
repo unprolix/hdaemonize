@@ -315,11 +315,9 @@ getUserID user =
 dropPrivileges :: CreateDaemon a -> IO ()
 dropPrivileges daemon =
     do let targetUser = fromJust $ asum [ user daemon
-                                        , name daemon
                                         , Just "daemon"
                                         ]
            targetGroup = fromJust $ asum [ group daemon
-                                         , name daemon
                                          , Just "daemon"
                                          ]
        mud <- getUserID targetUser
