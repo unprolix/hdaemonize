@@ -312,28 +312,27 @@ getUserID user =
         f (Left _)    = Nothing
         f (Right uid) = Just uid
 
+-- only drop privileges if a user is specified
 dropPrivileges :: CreateDaemon a -> IO ()
-dropPrivileges daemon =
-    do let targetUser = fromJust $ asum [ user daemon
-                                        , Just "daemon"
-                                        ]
-           targetGroup = fromJust $ asum [ group daemon
-                                         , Just "daemon"
-                                         ]
-       mud <- getUserID targetUser
-       mgd <- getGroupID targetGroup
-       u <- case mud of
-           Nothing -> do syslog Error "Privilege drop failure, no suitable user."
-                         exitImmediately (ExitFailure 1)
-                         undefined
-           Just ud -> pure ud
-       g <- case mgd of
-           Nothing -> do syslog Error "Privilege drop failure, no suitable group."
-                         exitImmediately (ExitFailure 1)
-                         undefined
-           Just gd -> pure gd
-       setGroupID g
-       setUserID u
+dropPrivileges daemon = do
+    case group daemon of
+      Nothing -> pure ()
+      Just targetGroup -> do
+        mud <- getGroupID targetGroup
+        case mud of
+          Nothing -> do syslog Error "Privilege drop failure, could not identify specified group."
+                        exitImmediately (ExitFailure 1)
+                        undefined
+          Just gd -> setGroupID gd
+    case user daemon of
+      Nothing -> pure ()
+      Just targetUser -> do
+        mud <- getUserID targetUser
+        case mud of
+          Nothing -> do syslog Error "Privilege drop failure, could not identify specified user."
+                        exitImmediately (ExitFailure 1)
+                        undefined
+          Just ud -> setUserID ud
 
 pidFile:: CreateDaemon a -> String
 pidFile daemon = joinPath [dir, fromJust (name daemon) ++ ".pid"]
