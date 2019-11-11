@@ -1,6 +1,6 @@
 `hdaemonize`
 =================
-[![Build Status](https://travis-ci.org/greydot/hdaemonize.svg?branch=master)](https://travis-ci.org/greydot/hdaemonize)
+[![Build Status](https://travis-ci.org/unprolix/hdaemonize.svg?branch=master)](https://travis-ci.org/unprolix/hdaemonize)
 
 `hdaemonize` is a simple library that hides some of the complexities
 of writing UNIX daemons in Haskell.
@@ -9,7 +9,7 @@ Obtaining
 -----------
 
 The latest version is available (BSD license) at
-[GitHub](https://github.com/greydot/hdaemonize).
+[GitHub](https://github.com/unprolix/hdaemonize).
 
 Using
 -------
@@ -68,6 +68,11 @@ prefers to use those of `mydaemon`, if present.
 Changelog
 ---------
 
+* 0.5.6
+    * Add `serviced'` function and `Operation` (`Start`, `Stop`, etc.) to allow invocation separated from commandline
+    * Only attempt to change effective user/group ID when explicitly specified.
+    * Do not attempt to set user or group to the daemon's name in the absence of a specified user or group.
+
 * 0.5.5
     * Fix a bug where hdaemonize fails when user or group "daemon" is absent
 
@@ -96,6 +101,8 @@ Changelog
 
 Authors
 -------
+Jeremy Bornstein <jeremy@jeremy.org>
+
 Lana Black <lanablack@amok.cc>
 
 Anton Tayanovskyy <name.surname@gmail.com>.
