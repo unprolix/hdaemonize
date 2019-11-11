@@ -60,10 +60,15 @@ The following commands are also made available:
     # mydaemon stop
     # mydaemon restart
 
-Finally, `mydaemon` drops privileges.  By default it changes the
-effective user and group ids to those of the `daemon` user, but it
-prefers to use those of `mydaemon`, if present.
+Finally, if configured to do so, `mydaemon` drops privileges by
+changing its effective user/group ID. (If no user/group ID are
+specified, it will continue execution as the original user and group.)
 
+Note that if you wish to parse your own commandline arguments, you can
+replace invocation of the `serviced` function with `serviced'`. This
+requires specification of an `Operation` which indicates whether the
+daemon should be started, stopped, restarted, or whether its status
+should be queried.
 
 Changelog
 ---------
